@@ -1,0 +1,19 @@
+name: dart_bump
+description: Automates Dart project version bumps using Git diffs and AI-generated CHANGELOG entries.
+
+version: 1.0.0
+repository: https://github.com/gmpassos/dart_bump
+
+executables:
+  dart_bump:
+
+environment:
+  sdk: ^3.9.0
+
+# Add regular dependencies here.
+dependencies:
+  # path: ^1.9.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6
