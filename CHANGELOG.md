@@ -1,3 +1,5 @@
+## 1.0.1
+
 - `bin/dart_bump.dart`:
   - Added `--diff-context` CLI option to specify number of context lines for `git diff` (default 10).
   - Improved parsing of `--extra-file` option to handle empty values gracefully.
