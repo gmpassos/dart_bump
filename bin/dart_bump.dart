@@ -16,6 +16,10 @@ void main(List<String> argsOrig) async {
     exit(0);
   }
 
+  final bumpMajor = args.options.containsKey('major');
+  final bumpMinor = args.options.containsKey('minor');
+  final bumpPatch = args.options.containsKey('patch');
+
   final dryRun = args.flag('n') || args.options.containsKey('dryrun');
 
   var projectDirPath = args.argumentAsString(0, Directory.current.path)!;
@@ -73,12 +77,19 @@ void main(List<String> argsOrig) async {
 
   print('\n═════════════════════════[dart_bump]══════════════════════════\n');
 
+  final versionBumpType = VersionBumpType.resolve(
+    major: bumpMajor,
+    minor: bumpMinor,
+    patch: bumpPatch,
+  );
+
   final bump = DartBump(
     projectDir,
     gitDiffTag: gitDiffTag,
     gitDiffLinesContext: gitDiffLinesContext?.clamp(2, 100) ?? 10,
     changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
     extraFiles: extraFiles,
+    versionBumpType: versionBumpType,
     dryRun: dryRun,
   );
 
@@ -118,18 +129,21 @@ void main(List<String> argsOrig) async {
 }
 
 void showHelp() {
-  print(r'''
-[dart_bump] – 🚀 Smart Version Bumping for Dart Projects
+  print('''
+[dart_bump/${DartBump.VERSION}] – 🚀 Smart Version Bumping for Dart Projects
 
 USAGE:
-  $ dart_bump [<project-dir>] [--api-key <key>] [options]
+  \$ dart_bump [<project-dir>] [--api-key <key>] [options]
 
 OPTIONS:
   %project-dir                 📂 Dart project directory (default: current directory)
-  --api-key <key>              🔑 OpenAI API key (default: $OPENAI_API_KEY)
+  --api-key <key>              🔑 OpenAI API key (default: \$OPENAI_API_KEY)
   --extra-file <file=regexp>   🗂️ Specify extra files to bump with a Dart RegExp (multiple allowed)
   --diff-tag <tag>             🏷️ Generate diff from the given Git tag to HEAD (accepts tag `last`)
   --diff-context <n>           📄 Number of context lines for git diff (default: 10)
+  --major                      🧱 Bump major version (breaking changes)
+  --minor                      🧩 Bump minor version (new features)
+  --patch                      🩹 Bump patch version (bug fixes) (default)
   -n, --dry-run                🧪 Preview changes only — no files will be modified
   -h, --help                   ❓ Show this help message
 

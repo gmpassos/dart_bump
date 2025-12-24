@@ -1,3 +1,15 @@
+## 1.0.4
+
+- CLI (`bin/dart_bump.dart`):
+  - Added `--major`, `--minor`, and `--patch` options to specify semantic version bump type.
+  - Default bump type is `patch`.
+  - Parsed bump type flags and passed resolved `VersionBumpType` to `DartBump`.
+
+- `lib/src/dart_bump_base.dart`:
+  - Added `VersionBumpType` enum to represent `major`, `minor`, and `patch` version increments.
+  - Added `versionBumpType` field to `DartBump` to control which semantic version component to bump.
+  - Updated version bump logic in `bumpPubspecVersion` to use `versionBumpType` for calculating new version.
+
 ## 1.0.3
 
 - Added `dryRun` mode to `DartBump`:

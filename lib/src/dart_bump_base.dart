@@ -4,6 +4,43 @@ import 'package:path/path.dart' as p;
 
 import 'changelog_generator.dart';
 
+/// Defines the type of semantic version increment to apply.
+///
+/// - `major`: Incompatible API changes (X.0.0)
+/// - `minor`: Backward-compatible feature additions (0.X.0)
+/// - `patch`: Backward-compatible bug fixes (0.0.X)
+enum VersionBumpType {
+  major,
+  minor,
+  patch;
+
+  static VersionBumpType resolve({bool? major, bool? minor, bool? patch}) {
+    if (major == true) return VersionBumpType.major;
+    if (minor == true) return VersionBumpType.minor;
+    if (patch == true) return VersionBumpType.patch;
+    return VersionBumpType.patch;
+  }
+
+  String bump(int major, int minor, int patch, [String? dev]) {
+    dev = (dev ?? '').trim();
+
+    switch (this) {
+      case VersionBumpType.major:
+        {
+          return '${major + 1}.0.0$dev';
+        }
+      case VersionBumpType.minor:
+        {
+          return '$major.${minor + 1}.0$dev';
+        }
+      case VersionBumpType.patch:
+        {
+          return '$major.$minor.${patch + 1}$dev';
+        }
+    }
+  }
+}
+
 /// Automates semantic patch version bumps for Dart projects.
 ///
 /// `DartBump` performs the following steps:
@@ -18,10 +55,18 @@ import 'changelog_generator.dart';
 class DartBump {
   /// Package `dart_bump` version.
   // ignore: non_constant_identifier_names
-  static final String VERSION = '1.0.3';
+  static final String VERSION = '1.0.4';
 
   /// Root directory of the Dart project.
   final Directory projectDir;
+
+  /// Determines which part of the semantic version will be incremented.
+  ///
+  /// Controls whether the `major`, `minor`, or `patch` component is bumped
+  /// during [bump] execution.
+  ///
+  /// Defaults to [VersionBumpType.patch].
+  final VersionBumpType versionBumpType;
 
   /// The Git tag used as the reference point for generating diffs.
   ///
@@ -77,6 +122,7 @@ class DartBump {
     this.gitDiffLinesContext = 10,
     this.extraFiles,
     this.changeLogGenerator,
+    this.versionBumpType = VersionBumpType.patch,
     this.dryRun = false,
   });
 
@@ -112,7 +158,11 @@ class DartBump {
     final dev = match.group(4) ?? '';
 
     final oldVersion = '$major.$minor.$patch$dev';
-    final newVersion = '$major.$minor.${patch + 1}$dev';
+    final newVersion = versionBumpType.bump(major, minor, patch, dev);
+
+    log(
+      "🔢  Version bump(${versionBumpType.name}): `$oldVersion` -> `$newVersion`",
+    );
 
     if (!dryRun) {
       file.writeAsStringSync(

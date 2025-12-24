@@ -225,6 +225,91 @@ class ApiRoot {
     ).readAsStringSync();
     expect(apiRootContent, contains("'1.0.0'"));
   });
+
+  group('VersionBumpType', () {
+    test('VersionBumpType.patch', () async {
+      final bump = TestDartBump(
+        tempDir,
+        versionBumpType: VersionBumpType.patch,
+      );
+
+      final result = await bump.bump();
+
+      expect(result, isNotNull);
+      expect(result!.version, '1.0.1');
+
+      final pubspec = File('${tempDir.path}/pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('version: 1.0.1'));
+    });
+
+    test('VersionBumpType.minor', () async {
+      final bump = TestDartBump(
+        tempDir,
+        versionBumpType: VersionBumpType.minor,
+      );
+
+      final result = await bump.bump();
+
+      expect(result, isNotNull);
+      expect(result!.version, '1.1.0');
+
+      final pubspec = File('${tempDir.path}/pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('version: 1.1.0'));
+    });
+
+    test('VersionBumpType.major', () async {
+      final bump = TestDartBump(
+        tempDir,
+        versionBumpType: VersionBumpType.major,
+      );
+
+      final result = await bump.bump();
+
+      expect(result, isNotNull);
+      expect(result!.version, '2.0.0');
+
+      final pubspec = File('${tempDir.path}/pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('version: 2.0.0'));
+    });
+
+    group('VersionBumpType.bump()', () {
+      test('patch bump increments patch only', () {
+        final v = VersionBumpType.patch.bump(1, 2, 3);
+        print(v);
+        expect(v, '1.2.4');
+      });
+
+      test('minor bump increments minor and resets patch', () {
+        final v = VersionBumpType.minor.bump(1, 2, 3);
+        print(v);
+        expect(v, '1.3.0');
+      });
+
+      test('major bump increments major and resets minor and patch', () {
+        final v = VersionBumpType.major.bump(1, 2, 3);
+        print(v);
+        expect(v, '2.0.0');
+      });
+
+      test('patch bump preserves dev suffix', () {
+        final v = VersionBumpType.patch.bump(1, 2, 3, '-dev.1');
+        print(v);
+        expect(v, '1.2.4-dev.1');
+      });
+
+      test('minor bump preserves dev suffix', () {
+        final v = VersionBumpType.minor.bump(1, 2, 3, '-beta');
+        print(v);
+        expect(v, '1.3.0-beta');
+      });
+
+      test('major bump preserves dev suffix', () {
+        final v = VersionBumpType.major.bump(1, 2, 3, '-rc.1');
+        print(v);
+        expect(v, '2.0.0-rc.1');
+      });
+    });
+  });
 }
 
 /// Mock CHANGELOG generator for tests
@@ -266,6 +351,7 @@ class TestDartBump extends DartBump {
     this.gitDiff = '',
     this.tags = const [],
     super.gitDiffTag,
+    super.versionBumpType,
     super.dryRun,
   });
 

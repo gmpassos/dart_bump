@@ -89,6 +89,9 @@ dart_bump [<project-dir>] [--api-key <key>] [--extra-file <file=regexp>]
 * `--extra-file <file=regexp>`: Specify extra files to update with a Dart RegExp 🗂️ (multiple allowed)
 * `--diff-tag <tag>`: Generate diff from the given Git tag to HEAD 🏷  (accepts tag `last`)
 * `--diff-context <n>`: Number of context lines for git diff 📄  (default: 10)
+* `--major`: Bump major version (breaking changes) 🧱
+* `--minor`: Bump minor version (new features) 🧩
+* `--patch`: Bump patch version (bug fixes) 🩹  (default)
 * `-n, --dry-run`: Preview changes only — no files will be modified 🧪  (default: false)
 * `-h, --help`: Show help message ❓
 

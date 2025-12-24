@@ -1,7 +1,7 @@
 name: dart_bump
 description: Automates Dart project version bumps using Git diffs and AI-generated CHANGELOG entries.
 
-version: 1.0.3
+version: 1.0.4
 repository: https://github.com/gmpassos/dart_bump
 
 executables:
