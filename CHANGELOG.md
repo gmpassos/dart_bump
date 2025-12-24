@@ -1,3 +1,11 @@
+- `DartBump`:
+  - Added static `VERSION` field.
+  - Added `dryRun` constructor parameter and field.
+  - `bumpPatchVersion`: skips writing `pubspec.yaml` if `dryRun` is true.
+  - `updateChangelog`: skips writing `CHANGELOG.md` if `dryRun` is true.
+  - `updateExtraFiles`: skips writing extra files if `dryRun` is true.
+  - `bump`: logs dry run mode and adjusts logging for skipped writes.
+
 ## 1.0.2
 
 - `dart_bump.dart`:

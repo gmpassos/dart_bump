@@ -16,6 +16,10 @@ import 'changelog_generator.dart';
 /// All output is routed through [log], which can be overridden
 /// for custom logging or silent execution.
 class DartBump {
+  /// Package `dart_bump` version.
+  // ignore: non_constant_identifier_names
+  static final String VERSION = '1.0.3';
+
   /// Root directory of the Dart project.
   final Directory projectDir;
 
@@ -58,12 +62,22 @@ class DartBump {
   /// placeholder entry may be used instead.
   final ChangeLogGenerator? changeLogGenerator;
 
+  /// When enabled, performs a dry run without writing any files.
+  ///
+  /// All computations, version resolution, and Git operations are executed,
+  /// but no changes are persisted to disk. Useful for previewing the bump
+  /// result and generated CHANGELOG entries safely.
+  ///
+  /// Defaults to `false`.
+  final bool dryRun;
+
   DartBump(
     this.projectDir, {
     this.gitDiffTag,
     this.gitDiffLinesContext = 10,
     this.extraFiles,
     this.changeLogGenerator,
+    this.dryRun = false,
   });
 
   /// Logs informational messages.
@@ -100,11 +114,14 @@ class DartBump {
     final oldVersion = '$major.$minor.$patch$dev';
     final newVersion = '$major.$minor.${patch + 1}$dev';
 
-    log('🔢  pubspec.yaml: $oldVersion → $newVersion');
-
-    file.writeAsStringSync(
-      content.replaceFirst(match.group(0)!, 'version: $newVersion'),
-    );
+    if (!dryRun) {
+      file.writeAsStringSync(
+        content.replaceFirst(match.group(0)!, 'version: $newVersion'),
+      );
+      log('🔢  pubspec.yaml: $oldVersion → $newVersion');
+    } else {
+      log('🔢  [SKIP] pubspec.yaml: $oldVersion → $newVersion');
+    }
 
     return newVersion;
   }
@@ -120,12 +137,18 @@ class DartBump {
       changeLogEntry,
     );
 
-    log('📝  Updating CHANGELOG.md');
-
-    if (file.existsSync()) {
-      file.writeAsStringSync(changeLogEntryVersioned + file.readAsStringSync());
+    if (!dryRun) {
+      if (file.existsSync()) {
+        file.writeAsStringSync(
+          changeLogEntryVersioned + file.readAsStringSync(),
+        );
+        log('📝  Updated CHANGELOG.md');
+      } else {
+        file.writeAsStringSync(changeLogEntryVersioned);
+        log('📝  Created CHANGELOG.md');
+      }
     } else {
-      file.writeAsStringSync(changeLogEntryVersioned);
+      log('📝  [SKIP] Updated CHANGELOG.md');
     }
 
     return changeLogEntryVersioned;
@@ -267,9 +290,12 @@ class DartBump {
 
     if (content == updated) return null;
 
-    file.writeAsStringSync(updated);
-
-    print('   🔧  Updated file version: $fileName');
+    if (!dryRun) {
+      file.writeAsStringSync(updated);
+      print('   🔧  Updated file version: $fileName');
+    } else {
+      print('   🔧  [SKIP] Updated file version: $fileName');
+    }
 
     return file;
   }
@@ -375,7 +401,7 @@ class DartBump {
   /// Returns the raw [ProcessResult], including exit code, stdout, and stderr.
   /// The command is executed with `projectDir` as the working directory.
   ProcessResult runGitCommand(List<String> args) {
-    log('💻 Running> git ${args.join(' ')}');
+    log('💻  Running> git ${args.join(' ')}');
     return Process.runSync('git', args, workingDirectory: projectDir.path);
   }
 
@@ -408,13 +434,17 @@ class DartBump {
       throw 'Project directory does not exist';
     }
 
+    if (dryRun) {
+      log('🧪  Dry run mode — no files will be modified');
+    }
+
     log('📁  Project directory: ${projectDir.absolute.path}');
 
     if (!hasGitVersioning()) {
       throw 'Git repository not detected';
     }
 
-    log('✔   Git repository detected');
+    log('✅  Git repository detected');
 
     String? changeLogEntry;
     if (changeLogGenerator != null) {
@@ -440,7 +470,11 @@ class DartBump {
 
     var extraFiles = await updateExtraFiles(version);
 
-    log('🚀  Version bumped to $version');
+    if (!dryRun) {
+      log('🚀  Version bumped to $version');
+    } else {
+      log('🚀  [SKIP] Version bumped to $version');
+    }
 
     return (
       version: version,
