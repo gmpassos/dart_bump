@@ -314,7 +314,8 @@ class DartBump {
   /// - Required files cannot be updated
   ///
   /// Returns the new version and generated CHANGELOG entry.
-  Future<({String version, String? changeLogEntry})?> bump() async {
+  Future<({String version, String? changeLogEntry, List<File> extraFiles})?>
+  bump() async {
     if (!projectDir.existsSync()) {
       throw 'Project directory does not exist';
     }
@@ -350,15 +351,13 @@ class DartBump {
     var updatedChangeLogEntry = updateChangelog(version, changeLogEntry);
 
     var extraFiles = await updateExtraFiles(version);
-    if (extraFiles.isNotEmpty) {
-      log(
-        '📂  Extra files updated:\n'
-        '   📄  ${extraFiles.map((f) => f.path).join('\n   📄  ')}',
-      );
-    }
 
     log('🚀  Version bumped to $version');
 
-    return (version: version, changeLogEntry: updatedChangeLogEntry);
+    return (
+      version: version,
+      changeLogEntry: updatedChangeLogEntry,
+      extraFiles: extraFiles,
+    );
   }
 }

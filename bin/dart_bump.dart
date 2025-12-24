@@ -90,6 +90,13 @@ void main(List<String> argsOrig) async {
       );
     }
 
+    if (result.extraFiles.isNotEmpty) {
+      print(
+        '📂  Extra files updated:\n'
+        '   📄  ${result.extraFiles.map((f) => f.path).join('\n   📄  ')}',
+      );
+    }
+
     print('🎯  New version: ${result.version}');
     exit(0);
   } catch (e, s) {
