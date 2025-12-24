@@ -1,3 +1,10 @@
+## 1.0.3
+
+- Added `dryRun` mode to `DartBump`:
+  - `dryRun` flag disables all file writes while performing full computations and Git operations.
+  - When enabled, version bumps and changelog generation are previewed without modifying files.
+  - Logs indicate skipped file writes for `pubspec.yaml`, `CHANGELOG.md`, and extra files.
+
 - `DartBump`:
   - Added static `VERSION` field.
   - Added `dryRun` constructor parameter and field.
