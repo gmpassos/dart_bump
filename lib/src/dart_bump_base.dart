@@ -325,10 +325,12 @@ class DartBump {
 
     String? changeLogEntry;
     if (changeLogGenerator != null) {
-      log('🧠 $changeLogGenerator — generating CHANGELOG entries...');
       final patch = extractGitPatch();
-      if (patch != null) {
+      if (patch != null && patch.isNotEmpty) {
+        log('🧠 $changeLogGenerator — generating CHANGELOG entries...');
         changeLogEntry = await generateChangelogFromPatch(patch);
+      } else {
+        log('⚠️ Empty patch, no CHANGELOG to generate.');
       }
     } else {
       log(
