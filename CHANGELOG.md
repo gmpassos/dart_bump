@@ -1,3 +1,6 @@
+- `dart_bump.dart`:
+  - Added `--diff-tag` CLI option to specify a Git tag for generating diffs.
+
 ## 1.0.1
 
 - `bin/dart_bump.dart`:

@@ -20,6 +20,8 @@ void main(List<String> argsOrig) async {
 
   var gitDiffLinesContext = args.propertyAsInt('diffcontext');
 
+  var gitDiffTag = args.propertyAsString('difftag');
+
   var apiKey = args.optionAsString(
     'api-key',
     Platform.environment['OPENAI_API_KEY'],
@@ -71,6 +73,7 @@ void main(List<String> argsOrig) async {
 
   final bump = DartBump(
     projectDir,
+    gitDiffTag: gitDiffTag,
     gitDiffLinesContext: gitDiffLinesContext?.clamp(2, 100) ?? 10,
     changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
     extraFiles: extraFiles,
@@ -122,6 +125,7 @@ OPTIONS:
   %project-dir                 📂 Dart project directory (default: current directory)
   --api-key <key>              🔑 OpenAI API key (default: $OPENAI_API_KEY)
   --extra-file <file=regexp>   🗂️ Specify extra files to bump with a Dart RegExp (multiple allowed)
+  --diff-tag <tag>             🏷️  Generate diff from the given Git tag to HEAD (accepts tag `last`)
   --diff-context <n>           📄 Number of context lines for git diff (default: 10)
   -h, --help                   ❓ Show this help message
 
