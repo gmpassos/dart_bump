@@ -16,6 +16,8 @@ void main(List<String> argsOrig) async {
     exit(0);
   }
 
+  final dryRun = args.flag('n') || args.options.containsKey('dryrun');
+
   var projectDirPath = args.argumentAsString(0, Directory.current.path)!;
 
   var gitDiffLinesContext = args.propertyAsInt('diffcontext');
@@ -77,6 +79,7 @@ void main(List<String> argsOrig) async {
     gitDiffLinesContext: gitDiffLinesContext?.clamp(2, 100) ?? 10,
     changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
     extraFiles: extraFiles,
+    dryRun: dryRun,
   );
 
   try {
@@ -127,6 +130,7 @@ OPTIONS:
   --extra-file <file=regexp>   🗂️ Specify extra files to bump with a Dart RegExp (multiple allowed)
   --diff-tag <tag>             🏷️ Generate diff from the given Git tag to HEAD (accepts tag `last`)
   --diff-context <n>           📄 Number of context lines for git diff (default: 10)
+  -n, --dry-run                🧪 Preview changes only — no files will be modified
   -h, --help                   ❓ Show this help message
 
 ''');

@@ -6,6 +6,9 @@
   - `updateExtraFiles`: skips writing extra files if `dryRun` is true.
   - `bump`: logs dry run mode and adjusts logging for skipped writes.
 
+- CLI (`bin/dart_bump.dart`):
+  - Added `-n, --dry-run` option to preview changes without modifying files.
+
 ## 1.0.2
 
 - `dart_bump.dart`:
