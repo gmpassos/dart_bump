@@ -57,7 +57,8 @@ class ApiRoot {
 
     expect(changeLogGenerator.receivedPatches.length, 1);
     expect(bump.logs.any((l) => l.contains('Git patch extracted')), isTrue);
-    expect(bump.logs.any((l) => l.contains('Version bumped')), isTrue);
+    expect(bump.logs.any((l) => l.contains('Updating CHANGELOG.md')), isTrue);
+    expect(bump.logs.any((l) => l.contains('Version bumped to 1.0.1')), isTrue);
   });
 
   test('bump handles empty patch gracefully', () async {
@@ -78,6 +79,20 @@ class ApiRoot {
     final changelog = File('${tempDir.path}/CHANGELOG.md').readAsStringSync();
     expect(changelog, contains('## 1.0.1'));
     expect(changelog, contains('- ?')); // default entry for empty patch
+
+    expect(
+      bump.logs.any((l) => l.contains('Git patch extracted (0 bytes)')),
+      isTrue,
+    );
+
+    expect(
+      bump.logs.any(
+        (l) => l.contains('Empty patch, no CHANGELOG to generate.'),
+      ),
+      isTrue,
+    );
+
+    expect(bump.logs.any((l) => l.contains('Version bumped to 1.0.1')), isTrue);
   });
 
   test(
