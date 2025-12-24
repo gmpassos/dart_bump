@@ -18,6 +18,8 @@ void main(List<String> argsOrig) async {
 
   var projectDirPath = args.argumentAsString(0, Directory.current.path)!;
 
+  var gitDiffLinesContext = args.propertyAsInt('diffcontext');
+
   var apiKey = args.optionAsString(
     'api-key',
     Platform.environment['OPENAI_API_KEY'],
@@ -28,7 +30,9 @@ void main(List<String> argsOrig) async {
   final extraFilesArg = args.options['extrafile'];
   final extraFilesArgList = extraFilesArg is List
       ? extraFilesArg.map((e) => e.toString()).toList()
-      : [extraFilesArg.toString()];
+      : (extraFilesArg != null && extraFilesArg.toString().isNotEmpty
+            ? [extraFilesArg.toString()]
+            : []);
 
   final Map<String, RegExp> extraFiles = {};
   for (var e in extraFilesArgList) {
@@ -67,6 +71,7 @@ void main(List<String> argsOrig) async {
 
   final bump = DartBump(
     projectDir,
+    gitDiffLinesContext: gitDiffLinesContext?.clamp(2, 100) ?? 10,
     changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
     extraFiles: extraFiles,
   );
@@ -117,6 +122,7 @@ OPTIONS:
   %project-dir                 📂 Dart project directory (default: current directory)
   --api-key <key>              🔑 OpenAI API key (default: $OPENAI_API_KEY)
   --extra-file <file=regexp>   🗂️ Specify extra files to bump with a Dart RegExp (multiple allowed)
+  --diff-context <n>           📄 Number of context lines for git diff (default: 10)
   -h, --help                   ❓ Show this help message
 
 ''');
