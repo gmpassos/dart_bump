@@ -19,6 +19,10 @@ class DartBump {
   /// Root directory of the Dart project.
   final Directory projectDir;
 
+  /// Number of context lines to include in `git diff`.
+  /// Defaults to 10.
+  final int gitDiffLinesContext;
+
   /// Optional map of additional files to update, where:
   /// - **key** is the relative file path (relative to [projectDir])
   /// - **value** is a [RegExp] used to match version strings within that file
@@ -44,7 +48,12 @@ class DartBump {
   /// placeholder entry may be used instead.
   final ChangeLogGenerator? changeLogGenerator;
 
-  DartBump(this.projectDir, {this.extraFiles, this.changeLogGenerator});
+  DartBump(
+    this.projectDir, {
+    this.gitDiffLinesContext = 10,
+    this.extraFiles,
+    this.changeLogGenerator,
+  });
 
   /// Logs informational messages.
   ///
@@ -271,7 +280,9 @@ class DartBump {
   ///
   /// Returns `null` if the command fails.
   String? extractGitPatch() {
-    final result = runGitCommand(['diff']);
+    var args = ['diff', if (gitDiffLinesContext > 1) '-U$gitDiffLinesContext'];
+
+    final result = runGitCommand(args);
     if (result.exitCode != 0) return null;
 
     final patch = result.stdout as String;
@@ -288,6 +299,7 @@ class DartBump {
   /// Returns the raw [ProcessResult], including exit code, stdout, and stderr.
   /// The command is executed with `projectDir` as the working directory.
   ProcessResult runGitCommand(List<String> args) {
+    log('💻 Running> git ${args.join(' ')}');
     return Process.runSync('git', args, workingDirectory: projectDir.path);
   }
 

@@ -3,6 +3,10 @@
   - Improved parsing of `--extra-file` option to handle empty values gracefully.
   - Passed clamped `gitDiffLinesContext` (2 to 100) to `DartBump` constructor.
 
+- `DartBump`:
+  - Added `gitDiffLinesContext` field to control context lines in `git diff` (default 10).
+  - Modified `extractGitPatch` to include `-U<gitDiffLinesContext>` argument in `git diff` command.
+
 ## 1.0.0
 
 - Initial version.
