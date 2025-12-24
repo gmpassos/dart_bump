@@ -125,7 +125,7 @@ OPTIONS:
   %project-dir                 📂 Dart project directory (default: current directory)
   --api-key <key>              🔑 OpenAI API key (default: $OPENAI_API_KEY)
   --extra-file <file=regexp>   🗂️ Specify extra files to bump with a Dart RegExp (multiple allowed)
-  --diff-tag <tag>             🏷️  Generate diff from the given Git tag to HEAD (accepts tag `last`)
+  --diff-tag <tag>             🏷️ Generate diff from the given Git tag to HEAD (accepts tag `last`)
   --diff-context <n>           📄 Number of context lines for git diff (default: 10)
   -h, --help                   ❓ Show this help message
 
