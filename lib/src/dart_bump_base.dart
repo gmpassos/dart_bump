@@ -80,7 +80,7 @@ class DartBump {
     final oldVersion = '$major.$minor.$patch$dev';
     final newVersion = '$major.$minor.${patch + 1}$dev';
 
-    log('🔢 pubspec.yaml: $oldVersion → $newVersion');
+    log('🔢  pubspec.yaml: $oldVersion → $newVersion');
 
     file.writeAsStringSync(
       content.replaceFirst(match.group(0)!, 'version: $newVersion'),
@@ -93,19 +93,22 @@ class DartBump {
   ///
   /// If the file does not exist, it is created.
   /// Always returns `true` once writing succeeds.
-  bool updateChangelog(String version, String? changeLogEntry) {
+  String updateChangelog(String version, String? changeLogEntry) {
     final file = File('${projectDir.path}/CHANGELOG.md');
-    final entry = prepareChangelogEntry(version, changeLogEntry);
+    final changeLogEntryVersioned = prepareChangelogEntry(
+      version,
+      changeLogEntry,
+    );
 
-    log('📝 Updating CHANGELOG.md');
+    log('📝  Updating CHANGELOG.md');
 
     if (file.existsSync()) {
-      file.writeAsStringSync(entry + file.readAsStringSync());
+      file.writeAsStringSync(changeLogEntryVersioned + file.readAsStringSync());
     } else {
-      file.writeAsStringSync(entry);
+      file.writeAsStringSync(changeLogEntryVersioned);
     }
 
-    return true;
+    return changeLogEntryVersioned;
   }
 
   /// Normalizes a generated CHANGELOG entry.
@@ -192,18 +195,19 @@ class DartBump {
     String version,
     RegExp versionRegex,
   ) async {
-    final filePath = p.join(projectDir.path, relativeFilePath);
+    final filePath = p.normalize(p.join(projectDir.path, relativeFilePath));
     final file = File(filePath);
 
     if (!file.existsSync()) {
-      log('⚠️ File not found, skipping update: ${file.path}');
+      log('⚠️  File not found, skipping update: ${file.path}');
       return null;
     }
 
     final fileName = file.uri.pathSegments.last;
 
     final content = file.readAsStringSync();
-    final updated = content.replaceAllMapped(versionRegex, (m) {
+
+    final updated = content.replaceFirstMapped(versionRegex, (m) {
       final l = m.groupCount;
       final s = m.group(0) ?? '';
       var replacement = '';
@@ -230,11 +234,11 @@ class DartBump {
 
       if (ver != null) {
         log(
-          "📄 $fileName:\n  🔄 Replacing version `$ver` with `$version`:\n  ✨ `$s` → `$replacement`",
+          "📄  $fileName:\n   🔄  Replacing version `$ver` with `$version`:\n   ✨ `$s` → `$replacement`",
         );
       } else {
         log(
-          "📄 $fileName:\n  🔄 Replacing with version `$version`:\n  ✨ `$s` → `$replacement`",
+          "📄  $fileName:\n   🔄  Replacing with version `$version`:\n   ✨ `$s` → `$replacement`",
         );
       }
 
@@ -245,7 +249,7 @@ class DartBump {
 
     file.writeAsStringSync(updated);
 
-    print('  🔧 Updated file version: $fileName');
+    print('   🔧  Updated file version: $fileName');
 
     return file;
   }
@@ -271,7 +275,7 @@ class DartBump {
     if (result.exitCode != 0) return null;
 
     final patch = result.stdout as String;
-    log('🧩 Git patch extracted (${patch.length} bytes)');
+    log('🧩  Git patch extracted (${patch.length} bytes)');
 
     return patch;
   }
@@ -315,26 +319,26 @@ class DartBump {
       throw 'Project directory does not exist';
     }
 
-    log('📁 Project directory: ${projectDir.absolute.path}');
+    log('📁  Project directory: ${projectDir.absolute.path}');
 
     if (!hasGitVersioning()) {
       throw 'Git repository not detected';
     }
 
-    log('✔ Git repository detected');
+    log('✔  Git repository detected');
 
     String? changeLogEntry;
     if (changeLogGenerator != null) {
       final patch = extractGitPatch();
       if (patch != null && patch.isNotEmpty) {
-        log('🧠 $changeLogGenerator — generating CHANGELOG entries...');
+        log('🧠  $changeLogGenerator — generating CHANGELOG entries...');
         changeLogEntry = await generateChangelogFromPatch(patch);
       } else {
-        log('⚠️ Empty patch, no CHANGELOG to generate.');
+        log('⚠️  Empty patch, no CHANGELOG to generate.');
       }
     } else {
       log(
-        '⚠️ No changeLogGenerator defined — skipping CHANGELOG entries generation.',
+        '⚠️  No changeLogGenerator defined — skipping CHANGELOG entries generation.',
       );
     }
 
@@ -343,19 +347,18 @@ class DartBump {
       throw 'Failed to bump pubspec version';
     }
 
-    if (!updateChangelog(version, changeLogEntry)) {
-      throw 'Failed to update CHANGELOG.md';
-    }
+    var updatedChangeLogEntry = updateChangelog(version, changeLogEntry);
 
     var extraFiles = await updateExtraFiles(version);
     if (extraFiles.isNotEmpty) {
       log(
-        '📂 Extra files updated:\n${extraFiles.map((f) => f.path).join('\n')}',
+        '📂  Extra files updated:\n'
+        '   📄  ${extraFiles.map((f) => f.path).join('\n   📄  ')}',
       );
     }
 
-    log('🚀 Version bumped to $version');
+    log('🚀  Version bumped to $version');
 
-    return (version: version, changeLogEntry: changeLogEntry);
+    return (version: version, changeLogEntry: updatedChangeLogEntry);
   }
 }

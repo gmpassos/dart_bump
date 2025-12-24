@@ -86,7 +86,7 @@ Example output:
     final apiKey = this.apiKey;
     return apiKey != null
         ? '$runtimeType#$hashCode{'
-              'apiKey: ${'*' * apiKey.length}'
+              'apiKey: ${'*' * apiKey.length.clamp(3, 6)}'
               '}'
         : '$runtimeType#$hashCode';
   }
@@ -118,7 +118,7 @@ class OpenAIChangeLogGenerator extends ChangeLogGenerator {
 
     final apiKey = this.apiKey;
     if (apiKey == null || apiKey.isEmpty) {
-      log("❌ No OpenAI API Key! Can't generate CHANGELOG entry!");
+      log("❌  No OpenAI API Key! Can't generate CHANGELOG entry!");
       return null;
     }
 
@@ -154,8 +154,12 @@ class OpenAIChangeLogGenerator extends ChangeLogGenerator {
     final decoded = jsonDecode(body);
     final genChangeLog = decoded['choices'][0]['message']['content'] as String;
 
-    log('📝 Generated CHANGELOG entry:');
-    log('<<$genChangeLog>>');
+    log(
+      '📝  Generated CHANGELOG entry:\n'
+      '────────── CHANGELOG ──────────\n'
+      '$genChangeLog\n'
+      '───────────────────────────────',
+    );
 
     return genChangeLog;
   }
