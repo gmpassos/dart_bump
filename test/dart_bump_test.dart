@@ -172,7 +172,7 @@ class TestDartBump extends DartBump {
 
   @override
   ProcessResult runGitCommand(List<String> args) {
-    if (args.length == 1 && args.first == 'diff') {
+    if (args.isNotEmpty && args.first == 'diff') {
       return ProcessResult(0, 0, gitDiff, '');
     }
     return ProcessResult(0, 0, '', '');
