@@ -1,6 +1,13 @@
 - `dart_bump.dart`:
   - Added `--diff-tag` CLI option to specify a Git tag for generating diffs.
 
+- `DartBump`:
+  - Added `gitDiffTag` field to specify the Git tag reference for diffs.
+  - Updated `extractGitPatch` to generate diffs from `gitDiffTag` to HEAD if provided.
+  - Added support for special `gitDiffTag` values `last` or `latest` to automatically resolve the highest version Git tag.
+  - Added `getGitTags` method to retrieve all Git tags sorted by version descending.
+  - Added `getGitLastTag` method to return the highest Git tag or null if none exist.
+
 ## 1.0.1
 
 - `bin/dart_bump.dart`:

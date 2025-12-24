@@ -19,6 +19,16 @@ class DartBump {
   /// Root directory of the Dart project.
   final Directory projectDir;
 
+  /// The Git tag used as the reference point for generating diffs.
+  ///
+  /// Typically, this represents the last released tag or the baseline commit
+  /// from which changes are compared. Can be used with `git diff` to extract
+  /// all changes since this tag.
+  ///
+  /// If set to `last`, the highest version tag is automatically resolved
+  /// using [getGitLastTag].
+  final String? gitDiffTag;
+
   /// Number of context lines to include in `git diff`.
   /// Defaults to 10.
   final int gitDiffLinesContext;
@@ -50,6 +60,7 @@ class DartBump {
 
   DartBump(
     this.projectDir, {
+    this.gitDiffTag,
     this.gitDiffLinesContext = 10,
     this.extraFiles,
     this.changeLogGenerator,
@@ -280,15 +291,80 @@ class DartBump {
   ///
   /// Returns `null` if the command fails.
   String? extractGitPatch() {
-    var args = ['diff', if (gitDiffLinesContext > 1) '-U$gitDiffLinesContext'];
+    var gitDiffTag = this.gitDiffTag?.trim();
+
+    {
+      var gitDiffTagLC = gitDiffTag?.toLowerCase();
+      if (gitDiffTagLC == 'last' || gitDiffTagLC == 'latest') {
+        var lastTag = getGitLastTag();
+        if (lastTag != null) {
+          log('🏷️  Last Git tag: $lastTag');
+          gitDiffTag = lastTag;
+        } else {
+          log(
+            '⚠️  Can’t resolve last Git tag. Using tag <$gitDiffTag> as reference',
+          );
+        }
+      }
+    }
+
+    var args = [
+      'diff',
+      if (gitDiffTag != null && gitDiffTag.isNotEmpty) ...[gitDiffTag, 'HEAD'],
+      if (gitDiffLinesContext > 1) '-U$gitDiffLinesContext',
+    ];
 
     final result = runGitCommand(args);
     if (result.exitCode != 0) return null;
 
     final patch = result.stdout as String;
-    log('🧩  Git patch extracted (${patch.length} bytes)');
+
+    if (gitDiffTag != null && gitDiffTag.isNotEmpty) {
+      log(
+        '🧩  Git patch extracted from tag <$gitDiffTag> (${patch.length} bytes)',
+      );
+    } else {
+      log('🧩  Git patch extracted (${patch.length} bytes)');
+    }
 
     return patch;
+  }
+
+  /// Returns the highest Git tag in the repository, or null if none exist.
+  String? getGitLastTag() {
+    final tags = getGitTags();
+    if (tags.isEmpty) return null;
+
+    final highestTag = tags.first;
+    log('🏷️  Highest Git tag: $highestTag');
+    return highestTag;
+  }
+
+  /// Returns all Git tags in the repository as a list of strings.
+  ///
+  /// Tags are returned in descending **version-aware order** (highest version first).
+  /// Returns an empty list if no tags exist or the Git command fails.
+  ///
+  /// Example:
+  /// ```dart
+  /// final tags = getGitTags();
+  /// print(tags); // ['v2.3.1', 'v2.3.0', 'v2.2.1', 'v1.10.0']
+  /// ```
+  List<String> getGitTags() {
+    final result = runGitCommand(['tag', '--sort=-v:refname']);
+    if (result.exitCode != 0) return [];
+
+    final tags = (result.stdout as String)
+        .split('\n')
+        .map((e) => e.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    log(
+      '🏷️  Git tags: ${tags.length > 5 ? '${tags.sublist(0, 5)}...#${tags.length}' : tags}',
+    );
+
+    return tags;
   }
 
   /// Executes a Git command synchronously within the project directory.
@@ -338,7 +414,7 @@ class DartBump {
       throw 'Git repository not detected';
     }
 
-    log('✔  Git repository detected');
+    log('✔   Git repository detected');
 
     String? changeLogEntry;
     if (changeLogGenerator != null) {
