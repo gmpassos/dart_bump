@@ -123,6 +123,38 @@ class ApiRoot {
       expect(apiRootContent, contains("'1.0.1'"));
     },
   );
+
+  test('bump uses last Git tag when gitDiffTag is "last"', () async {
+    final changeLogGenerator = TestChangeLogGenerator();
+
+    final bump = TestDartBump(
+      tempDir,
+      changeLogGenerator: changeLogGenerator,
+      gitDiffTag: 'last',
+      tags: ['v1.2.1', 'v1.2.0', 'v1.1.5', 'v1.0.0'],
+      gitDiff: 'diff --git a/lib/foo.dart b/lib/foo.dart\n+void foo() {}',
+    );
+
+    final result = await bump.bump();
+
+    expect(result, isNotNull);
+
+    expect(
+      bump.logs.any(
+        (l) => l.contains('Git tags: [v1.2.1, v1.2.0, v1.1.5, v1.0.0]'),
+      ),
+      isTrue,
+    );
+
+    expect(bump.logs.any((l) => l.contains('Last Git tag: v1.2.1')), isTrue);
+
+    expect(
+      bump.logs.any(
+        (l) => l.contains('Git patch extracted from tag <v1.2.1> (55 bytes)'),
+      ),
+      isTrue,
+    );
+  });
 }
 
 /// Mock CHANGELOG generator for tests
@@ -153,12 +185,17 @@ class TestChangeLogGenerator extends ChangeLogGenerator {
 
 class TestDartBump extends DartBump {
   final List<String> logs = [];
+
   final String gitDiff;
+
+  final List<String> tags;
 
   TestDartBump(
     super.projectDir, {
     super.changeLogGenerator,
-    required this.gitDiff,
+    this.gitDiff = '',
+    this.tags = const [],
+    super.gitDiffTag,
   });
 
   @override
@@ -172,9 +209,15 @@ class TestDartBump extends DartBump {
 
   @override
   ProcessResult runGitCommand(List<String> args) {
-    if (args.isNotEmpty && args.first == 'diff') {
-      return ProcessResult(0, 0, gitDiff, '');
+    if (args.isNotEmpty) {
+      final arg0 = args.first;
+      if (arg0 == 'tag') {
+        return ProcessResult(0, 0, tags.join('\n'), '');
+      } else if (arg0 == 'diff') {
+        return ProcessResult(0, 0, gitDiff, '');
+      }
     }
+
     return ProcessResult(0, 0, '', '');
   }
 
