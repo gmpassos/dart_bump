@@ -2,66 +2,39 @@
 
 import 'dart:io';
 
+import 'package:args_simple/args_simple_io.dart';
 import 'package:dart_bump/dart_bump.dart';
 
-void printUsage() {
-  print('''
-Usage: dart_bump [options]
+void main(List<String> argsOrig) async {
+  var args = ArgsSimple.parse(argsOrig);
 
-Options:
-  --project-dir <path>   Path to the Dart project (default: current directory)
-  --api-key <key>        OpenAI API key (optional; defaults to OPENAI_API_KEY env)
-  -h, --help             Show this help message
-''');
-}
+  final argHelp =
+      args.isEmpty || args.flag('h') || args.options.containsKey('help');
 
-Future<void> main(List<String> args) async {
-  String? projectDirPath;
-  String? apiKey;
-
-  for (var i = 0; i < args.length; i++) {
-    switch (args[i]) {
-      case '-h':
-      case '--help':
-        printUsage();
-        return;
-      case '--project-dir':
-        if (i + 1 < args.length) {
-          projectDirPath = args[++i];
-        } else {
-          stderr.writeln('Error: --project-dir requires a path.');
-          exit(1);
-        }
-        break;
-      case '--api-key':
-        if (i + 1 < args.length) {
-          apiKey = args[++i];
-        } else {
-          stderr.writeln('Error: --api-key requires a value.');
-          exit(1);
-        }
-        break;
-      default:
-        stderr.writeln('Unknown argument: ${args[i]}');
-        printUsage();
-        exit(1);
-    }
+  if (argHelp) {
+    showHelp();
+    exit(0);
   }
 
-  final projectDir = Directory(projectDirPath ?? Directory.current.path);
+  var projectDirPath = args.argumentAsString(0, Directory.current.path)!;
+
+  var apiKey = args.optionAsString(
+    'api-key',
+    Platform.environment['OPENAI_API_KEY'],
+  );
+
+  final projectDir = Directory(projectDirPath).absolute;
 
   if (!projectDir.existsSync()) {
     stderr.writeln(
-      'Error: Project directory does not exist: ${projectDir.path}',
+      '❌ Error: Project directory does not exist: ${projectDir.path}',
     );
     exit(1);
   }
 
   final bump = DartBump(
     projectDir,
-    changeLogGenerator: OpenAIChangeLogGenerator(
-      apiKey: apiKey ?? Platform.environment['OPENAI_API_KEY'],
-    ),
+    changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
   );
 
   try {
@@ -77,8 +50,24 @@ Future<void> main(List<String> args) async {
     if (result.changeLogEntry != null) {
       print('📝 Generated CHANGELOG entry:\n${result.changeLogEntry}');
     }
-  } catch (e) {
-    stderr.writeln('Error: $e');
+  } catch (e, s) {
+    stderr.writeln('❌ Error: $e');
+    stderr.writeln(s);
     exit(1);
   }
+}
+
+void showHelp() {
+  print(r'''
+[dart_bump] – 🚀 Smart Version Bumping for Dart Projects
+
+USAGE:
+  $ dart_bump [<project-dir>] [--api-key <key>] [options]
+
+OPTIONS:
+  %project-dir           📂 Dart project directory (default: current directory)
+  --api-key <key>        🔑 OpenAI API key (default: $OPENAI_API_KEY)
+  -h, --help             ❓ Show this help message
+
+''');
 }
