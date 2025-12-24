@@ -84,9 +84,11 @@ dart_bump [<project-dir>] [--api-key <key>] [--extra-file <file=regexp>]
 
 **Options:**
 
-* `<project-dir>`: Path to the Dart project (default: current directory) 📁
-* `--api-key <key>`: OpenAI API key (optional; defaults to `OPENAI_API_KEY` environment variable) 🔑
+* `<project-dir>`: Path to the Dart project 📁  (default: current directory)
+* `--api-key <key>`: OpenAI API key 🔑  (optional; defaults to `OPENAI_API_KEY` environment variable)
 * `--extra-file <file=regexp>`: Specify extra files to update with a Dart RegExp 🗂️ (multiple allowed)
+* `--diff-tag <tag>`: Generate diff from the given Git tag to HEAD 🏷  (accepts tag `last`)
+* `--diff-context <n>`: Number of context lines for git diff 📄  (default: 10)
 * `-h, --help`: Show help message ❓
 
 **Example usage:**
