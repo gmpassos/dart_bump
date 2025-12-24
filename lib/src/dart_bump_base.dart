@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+
 /// Automates semantic patch version bumps for Dart projects.
 ///
 /// `DartBump` performs the following steps:
@@ -16,6 +18,24 @@ class DartBump {
   /// Root directory of the Dart project.
   final Directory projectDir;
 
+  /// Optional map of additional files to update, where:
+  /// - **key** is the relative file path (relative to [projectDir])
+  /// - **value** is a [RegExp] used to match version strings within that file
+  ///
+  /// This allows updating multiple extra files beyond the main target, using
+  /// custom regex patterns for each file.
+  ///
+  /// Example:
+  /// ```dart
+  /// extraFiles: {
+  ///   'package.json': RegExp(r'("version":\s*")(\d+\.\d+\.\d+)(")'),
+  ///   'README.md': RegExp(r'Version: (\d+\.\d+\.\d+)'),
+  /// }
+  /// ```
+  ///
+  /// See also: [updateExtraFiles] for more details on regex format and usage examples.
+  final Map<String, RegExp>? extraFiles;
+
   /// Generator responsible for producing CHANGELOG entries from source changes.
   ///
   /// When provided, it is used to transform a Git patch into a formatted
@@ -23,7 +43,7 @@ class DartBump {
   /// placeholder entry may be used instead.
   final ChangeLogGenerator? changeLogGenerator;
 
-  DartBump(this.projectDir, {this.changeLogGenerator});
+  DartBump(this.projectDir, {this.extraFiles, this.changeLogGenerator});
 
   /// Logs informational messages.
   ///
@@ -111,26 +131,117 @@ class DartBump {
     return '$updated\n\n';
   }
 
-  /// Updates the API version passed to the superclass constructor
-  /// in `lib/src/api_root.dart`.
+  /// Updates additional project files with the new [version].
   ///
-  /// Returns `true` if a replacement was made.
-  bool updateApiRoot(String version) {
-    final file = File('${projectDir.path}/lib/src/api_root.dart');
-    if (!file.existsSync()) return false;
+  /// This method handles files beyond `pubspec.yaml` and `api_root.dart`
+  /// that should reflect the current project version. Each modified file
+  /// is returned in the resulting list.
+  ///
+  /// Returns a [Future] that completes with a list of updated [File] objects.
+  /// If no files were changed, the list will be empty.
+  Future<List<File>> updateExtraFiles(String version) async {
+    final extraFiles = this.extraFiles;
+    if (extraFiles == null || extraFiles.isEmpty) return [];
+
+    var updatedFiles = <File>[];
+
+    for (var e in extraFiles.entries) {
+      final relativePath = e.key;
+      final regex = e.value;
+
+      final updatedFile = await updateFileVersion(relativePath, version, regex);
+      if (updatedFile != null) {
+        updatedFiles.add(updatedFile);
+      }
+    }
+
+    return updatedFiles;
+  }
+
+  /// Updates a file at [relativeFilePath] (relative to [projectDir]) by
+  /// replacing version strings matching [versionRegex] with [version].
+  ///
+  /// The replacement behavior depends on the number of capturing groups in [versionRegex]:
+  /// - **0 groups**: replaces the entire match with `$version`
+  /// - **1 group**: replaces only the captured group while preserving text
+  ///   before and after the group
+  /// - **2 groups**: replaces with `$g1$version$g2`
+  /// - **3 groups**: replaces with `$g1$version$g3`
+  ///
+  /// Returns the updated [File] if changes were made, or `null` if the file
+  /// does not exist or no changes were needed.
+  ///
+  /// ### Examples:
+  ///
+  /// ```dart
+  /// // 1 group: simple semantic version like 1.2.3
+  /// final regex1 = RegExp(r'(\d+\.\d+\.\d+)');
+  /// await updateFileVersion('pubspec.yaml', '1.2.4', regex1);
+  ///
+  /// // 2 groups: version inside quotes, e.g., "version": "1.2.3"
+  /// final regex2 = RegExp(r'("version":\s*")\d+\.\d+\.\d+(")');
+  /// await updateFileVersion('package.json', '1.2.4', regex2);
+  ///
+  /// // 3 groups: version with prefix and suffix
+  /// final regex3 = RegExp(r'(<version>)(\d+\.\d+\.\d+)(</version>)');
+  /// await updateFileVersion('pom.xml', '1.2.4', regex3);
+  /// ```
+  Future<File?> updateFileVersion(
+    String relativeFilePath,
+    String version,
+    RegExp versionRegex,
+  ) async {
+    final filePath = p.join(projectDir.path, relativeFilePath);
+    final file = File(filePath);
+
+    if (!file.existsSync()) {
+      log('⚠️ File not found, skipping update: ${file.path}');
+      return null;
+    }
 
     final content = file.readAsStringSync();
-    final updated = content.replaceAllMapped(
-      RegExp(r'''(super\(['"][^'"]+['"]\s*,\s*)['"]([\w.\-]+)['"]'''),
-      (m) => "${m.group(1)}'$version'",
-    );
+    final updated = content.replaceAllMapped(versionRegex, (m) {
+      final l = m.groupCount;
+      final s = m.group(0) ?? '';
+      var replacement = '';
+      String? ver;
+      if (l == 1) {
+        ver = m.group(1)!;
+        var verIdx = s.indexOf(ver);
+        final before = s.substring(0, verIdx);
+        final after = s.substring(verIdx + ver.length);
+        replacement = "$before$version$after";
+      } else if (l >= 2) {
+        var before = m.group(1) ?? '';
+        String after;
+        if (l >= 3) {
+          ver = m.group(2)!;
+          after = m.group(3)!;
+        } else {
+          after = m.group(2)!;
+        }
+        replacement = "$before$version$after";
+      } else {
+        replacement = version;
+      }
 
-    if (content == updated) return false;
+      if (ver != null) {
+        log(
+          "🔄 Replacing version `$ver` with `$version`:\n✨ `$s` → `$replacement`",
+        );
+      } else {
+        log("🔄 Replacing with version `$version`:\n✨ `$s` → `$replacement`");
+      }
 
-    log('🔧 Updating api_root.dart');
+      return replacement;
+    });
+
+    if (content == updated) return null;
 
     file.writeAsStringSync(updated);
-    return true;
+    print('🔧 Updated file version: ${file.uri.pathSegments.last}');
+
+    return file;
   }
 
   /// Checks whether the project directory is a Git repository.
@@ -228,8 +339,11 @@ class DartBump {
       throw 'Failed to update CHANGELOG.md';
     }
 
-    if (!updateApiRoot(version)) {
-      throw 'Failed to update api_root.dart';
+    var extraFiles = await updateExtraFiles(version);
+    if (extraFiles.isNotEmpty) {
+      log(
+        '📂 Extra files updated:\n${extraFiles.map((f) => f.path).join('\n')}',
+      );
     }
 
     log('🚀 Version bumped to $version');
