@@ -57,7 +57,7 @@ class ApiRoot {
 
     expect(changeLogGenerator.receivedPatches.length, 1);
     expect(bump.logs.any((l) => l.contains('Git patch extracted')), isTrue);
-    expect(bump.logs.any((l) => l.contains('Updating CHANGELOG.md')), isTrue);
+    expect(bump.logs.any((l) => l.contains('Created CHANGELOG.md')), isTrue);
     expect(bump.logs.any((l) => l.contains('Version bumped to 1.0.1')), isTrue);
   });
 
@@ -155,6 +155,76 @@ class ApiRoot {
       isTrue,
     );
   });
+
+  test('dryRun does not modify files or write CHANGELOG', () async {
+    final changeLogGenerator = TestChangeLogGenerator();
+
+    final bump = TestDartBump(
+      tempDir,
+      changeLogGenerator: changeLogGenerator,
+      gitDiff: 'diff --git a/lib/foo.dart b/lib/foo.dart\n+void foo() {}',
+      dryRun: true,
+    );
+
+    final result = await bump.bump();
+
+    expect(result, isNotNull);
+    expect(result!.version, '1.0.1');
+
+    // pubspec.yaml NOT modified
+    final pubspec = File('${tempDir.path}/pubspec.yaml').readAsStringSync();
+    expect(pubspec, contains('version: 1.0.0'));
+
+    // CHANGELOG.md NOT created
+    expect(File('${tempDir.path}/CHANGELOG.md').existsSync(), isFalse);
+
+    // CHANGELOG generator still runs
+    expect(changeLogGenerator.receivedPatches.length, 1);
+
+    // Logs indicate dry run
+    expect(
+      bump.logs.any(
+        (l) => l.contains('Dry run mode — no files will be modified'),
+      ),
+      isTrue,
+    );
+
+    expect(
+      bump.logs.any((l) => l.contains('[SKIP] pubspec.yaml: 1.0.0 → 1.0.1')),
+      isTrue,
+    );
+    expect(
+      bump.logs.any((l) => l.contains('[SKIP] Updated CHANGELOG.md')),
+      isTrue,
+    );
+  });
+
+  test('updateExtraFiles does not modify files in dry run mode', () async {
+    final extraFile = File('${tempDir.path}/lib/src/version_file.dart');
+    extraFile.writeAsStringSync("const version = '1.0.0';");
+
+    final bump = DartBump(
+      tempDir,
+      dryRun: true,
+      extraFiles: {
+        'lib/src/version_file.dart': RegExp(r"const version = '([^']+)'"),
+        'lib/src/api_root.dart': RegExp(r"'(\d+\.\d+\.\d+)'"),
+      },
+    );
+
+    final updatedFiles = await bump.updateExtraFiles('1.0.1');
+
+    // Files are detected but NOT written
+    expect(updatedFiles.length, 2);
+
+    final versionFileContent = extraFile.readAsStringSync();
+    expect(versionFileContent, contains("const version = '1.0.0'"));
+
+    final apiRootContent = File(
+      '${tempDir.path}/lib/src/api_root.dart',
+    ).readAsStringSync();
+    expect(apiRootContent, contains("'1.0.0'"));
+  });
 }
 
 /// Mock CHANGELOG generator for tests
@@ -196,6 +266,7 @@ class TestDartBump extends DartBump {
     this.gitDiff = '',
     this.tags = const [],
     super.gitDiffTag,
+    super.dryRun,
   });
 
   @override
