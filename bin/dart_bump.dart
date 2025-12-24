@@ -23,6 +23,37 @@ void main(List<String> argsOrig) async {
     Platform.environment['OPENAI_API_KEY'],
   );
 
+  // Parse extra file patterns
+
+  final extraFilesArg = args.options['extrafile'];
+  final extraFilesArgList = extraFilesArg is List
+      ? extraFilesArg.map((e) => e.toString()).toList()
+      : [extraFilesArg.toString()];
+
+  final Map<String, RegExp> extraFiles = {};
+  for (var e in extraFilesArgList) {
+    var item = e.toString();
+    var idx = item.indexOf('=');
+    if (idx < 1) {
+      stderr.writeln(
+        '❌ Invalid --extra-file format: $item\nExpected format: filePath=RegExp',
+      );
+      exit(1);
+    }
+
+    var filePath = item.substring(0, idx);
+    var re = item.substring(idx + 1);
+
+    try {
+      extraFiles[filePath] = RegExp(re);
+    } catch (e) {
+      stderr.writeln('❌ Invalid --extra-file `$filePath` RegExp: `$re`');
+      exit(1);
+    }
+  }
+
+  ////////////
+
   final projectDir = Directory(projectDirPath).absolute;
 
   if (!projectDir.existsSync()) {
@@ -32,26 +63,37 @@ void main(List<String> argsOrig) async {
     exit(1);
   }
 
+  print('\n═════════════════════════[dart_bump]══════════════════════════\n');
+
   final bump = DartBump(
     projectDir,
     changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
+    extraFiles: extraFiles,
   );
 
   try {
     final result = await bump.bump();
 
     if (result == null) {
-      print('Nothing to bump.');
+      print('⚠️  Nothing to bump - no changes detected.');
       return;
     }
 
-    print('🚀 Version bumped to ${result.version}');
+    print('\n══════════════════════════════════════════════════════════════\n');
 
     if (result.changeLogEntry != null) {
-      print('📝 Generated CHANGELOG entry:\n${result.changeLogEntry}');
+      print(
+        '📝  New CHANGELOG entry:\n'
+        '────────── CHANGELOG ──────────\n'
+        '${result.changeLogEntry}\n'
+        '───────────────────────────────',
+      );
     }
+
+    print('🎯  New version: ${result.version}');
+    exit(0);
   } catch (e, s) {
-    stderr.writeln('❌ Error: $e');
+    stderr.writeln('❌  Error: $e');
     stderr.writeln(s);
     exit(1);
   }
@@ -65,9 +107,10 @@ USAGE:
   $ dart_bump [<project-dir>] [--api-key <key>] [options]
 
 OPTIONS:
-  %project-dir           📂 Dart project directory (default: current directory)
-  --api-key <key>        🔑 OpenAI API key (default: $OPENAI_API_KEY)
-  -h, --help             ❓ Show this help message
+  %project-dir                 📂 Dart project directory (default: current directory)
+  --api-key <key>              🔑 OpenAI API key (default: $OPENAI_API_KEY)
+  --extra-file <file=regexp>   🗂️ Specify extra files to bump with a Dart RegExp (multiple allowed)
+  -h, --help                   ❓ Show this help message
 
 ''');
 }
