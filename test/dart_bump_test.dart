@@ -227,7 +227,7 @@ class ApiRoot {
   });
 
   group('VersionBumpType', () {
-    test('VersionBumpType.patch', () async {
+    test('TestDartBump(patch)', () async {
       final bump = TestDartBump(
         tempDir,
         versionBumpType: VersionBumpType.patch,
@@ -242,7 +242,7 @@ class ApiRoot {
       expect(pubspec, contains('version: 1.0.1'));
     });
 
-    test('VersionBumpType.minor', () async {
+    test('TestDartBump(minor)', () async {
       final bump = TestDartBump(
         tempDir,
         versionBumpType: VersionBumpType.minor,
@@ -257,7 +257,7 @@ class ApiRoot {
       expect(pubspec, contains('version: 1.1.0'));
     });
 
-    test('VersionBumpType.major', () async {
+    test('TestDartBump(major)', () async {
       final bump = TestDartBump(
         tempDir,
         versionBumpType: VersionBumpType.major,
@@ -307,6 +307,58 @@ class ApiRoot {
         final v = VersionBumpType.major.bump(1, 2, 3, '-rc.1');
         print(v);
         expect(v, '2.0.0-rc.1');
+      });
+    });
+
+    group('VersionBumpType.resolve()', () {
+      test('returns major when major=true', () {
+        final t = VersionBumpType.resolve(major: true);
+        print(t);
+        expect(t, VersionBumpType.major);
+      });
+
+      test('returns minor when minor=true', () {
+        final t = VersionBumpType.resolve(minor: true);
+        print(t);
+        expect(t, VersionBumpType.minor);
+      });
+
+      test('returns patch when patch=true', () {
+        final t = VersionBumpType.resolve(patch: true);
+        print(t);
+        expect(t, VersionBumpType.patch);
+      });
+
+      test('major has priority over minor and patch', () {
+        final t = VersionBumpType.resolve(
+          major: true,
+          minor: true,
+          patch: true,
+        );
+        print(t);
+        expect(t, VersionBumpType.major);
+      });
+
+      test('minor has priority over patch', () {
+        final t = VersionBumpType.resolve(minor: true, patch: true);
+        print(t);
+        expect(t, VersionBumpType.minor);
+      });
+
+      test('defaults to patch when all flags are null', () {
+        final t = VersionBumpType.resolve();
+        print(t);
+        expect(t, VersionBumpType.patch);
+      });
+
+      test('defaults to patch when all flags are false', () {
+        final t = VersionBumpType.resolve(
+          major: false,
+          minor: false,
+          patch: false,
+        );
+        print(t);
+        expect(t, VersionBumpType.patch);
       });
     });
   });
