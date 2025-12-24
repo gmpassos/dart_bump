@@ -9,6 +9,9 @@
 - CLI (`bin/dart_bump.dart`):
   - Added `-n, --dry-run` option to preview changes without modifying files.
 
+- Shell script `bump.sh`:
+  - Updated example to use `dart run bin/dart_bump.dart` instead of global activate.
+
 ## 1.0.2
 
 - `dart_bump.dart`:
