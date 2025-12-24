@@ -134,8 +134,6 @@ class TestChangeLogGenerator extends ChangeLogGenerator {
     logs.add(message);
     print('» $message');
   }
-
-
 }
 
 class TestDartBump extends DartBump {
