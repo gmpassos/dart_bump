@@ -92,6 +92,9 @@ dart_bump [<project-dir>] [--api-key <key>] [--extra-file <file=regexp>]
 * `--major`: Bump major version (breaking changes) 🧱
 * `--minor`: Bump minor version (new features) 🧩
 * `--patch`: Bump patch version (bug fixes) 🩹  (default)
+* `--no-bump`: Skip version bumping entirely ⏭️
+* `--no-changelog`: Skip CHANGELOG generation 📝
+* `--no-extra`: Skip updating extra files 🗂️
 * `-n, --dry-run`: Preview changes only — no files will be modified 🧪  (default: false)
 * `-h, --help`: Show help message ❓
 
