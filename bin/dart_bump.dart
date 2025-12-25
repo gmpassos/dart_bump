@@ -20,6 +20,10 @@ void main(List<String> argsOrig) async {
   final bumpMinor = args.options.containsKey('minor');
   final bumpPatch = args.options.containsKey('patch');
 
+  final noBump = args.options.containsKey('no-bump');
+  final noChangelog = args.options.containsKey('no-changelog');
+  final noExtra = args.options.containsKey('no-extra');
+
   final dryRun = args.flag('n') || args.options.containsKey('dryrun');
 
   var projectDirPath = args.argumentAsString(0, Directory.current.path)!;
@@ -90,6 +94,9 @@ void main(List<String> argsOrig) async {
     changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
     extraFiles: extraFiles,
     versionBumpType: versionBumpType,
+    noBump: noBump,
+    noChangelog: noChangelog,
+    noExtra: noExtra,
     dryRun: dryRun,
   );
 
@@ -144,6 +151,9 @@ OPTIONS:
   --major                      🧱 Bump major version (breaking changes)
   --minor                      🧩 Bump minor version (new features)
   --patch                      🩹 Bump patch version (bug fixes) (default)
+  --no-bump                    🚫 Do not update version numbers
+  --no-changelog               🧾 Skip CHANGELOG generation
+  --no-extra                   🧺 Ignore all --extra-file entries
   -n, --dry-run                🧪 Preview changes only — no files will be modified
   -h, --help                   ❓ Show this help message
 

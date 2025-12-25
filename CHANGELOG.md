@@ -1,3 +1,26 @@
+## 1.0.5
+
+- CLI (`bin/dart_bump.dart`):
+  - Added CLI options `--no-bump`, `--no-changelog`, and `--no-extra` to control version bumping, changelog generation,
+    and extra file updates respectively.
+
+- `DartBump` class (`dart_bump_base.dart`):
+  - Added fields `noBump`, `noChangelog`, and `noExtra` to control skipping version bump, changelog generation, and
+    extra file updates.
+  - `bumpVersion`:
+    - Respects `noBump` flag to skip version increment and logs skip message.
+    - Returns tuple `(oldVersion, newVersion?)` where `newVersion` is `null` if bump skipped.
+  - `updateChangelog`:
+    - Respects `noChangelog` flag to skip changelog update and logs skip message.
+  - `updateExtraFiles`:
+    - Respects `noExtra` flag to skip updating extra files and logs skip message.
+  - Renamed `extractGitPatch` to `extractGitDiff`.
+  - Added `resolveChangeLogEntry` method to encapsulate changelog generation logic respecting `noChangelog` flag.
+  - `bump` method:
+    - Uses `resolveChangeLogEntry` for changelog generation.
+    - Uses `bumpVersion` and handles `noBump` case gracefully.
+    - Logs appropriate skip messages for all new flags.
+
 ## 1.0.4
 
 - CLI (`bin/dart_bump.dart`):

@@ -55,7 +55,7 @@ enum VersionBumpType {
 class DartBump {
   /// Package `dart_bump` version.
   // ignore: non_constant_identifier_names
-  static final String VERSION = '1.0.4';
+  static final String VERSION = '1.0.5';
 
   /// Root directory of the Dart project.
   final Directory projectDir;
@@ -107,6 +107,15 @@ class DartBump {
   /// placeholder entry may be used instead.
   final ChangeLogGenerator? changeLogGenerator;
 
+  /// Whether to skip all version bump operations.
+  final bool noBump;
+
+  /// Whether to skip CHANGELOG generation entirely.
+  final bool noChangelog;
+
+  /// Whether to ignore all `--extra-file` entries.
+  final bool noExtra;
+
   /// When enabled, performs a dry run without writing any files.
   ///
   /// All computations, version resolution, and Git operations are executed,
@@ -123,6 +132,9 @@ class DartBump {
     this.extraFiles,
     this.changeLogGenerator,
     this.versionBumpType = VersionBumpType.patch,
+    this.noBump = false,
+    this.noChangelog = false,
+    this.noExtra = false,
     this.dryRun = false,
   });
 
@@ -133,14 +145,14 @@ class DartBump {
     print(message);
   }
 
-  /// Increments the patch version in `pubspec.yaml`.
+  /// Increments the version in `pubspec.yaml`.
   ///
   /// Example: `1.2.3` → `1.2.4`
   ///
   /// Returns the new version string, or `null` if:
   /// - `pubspec.yaml` does not exist
   /// - No valid version line is found
-  String? bumpPatchVersion() {
+  (String, String?)? bumpVersion() {
     final file = File('${projectDir.path}/pubspec.yaml');
     if (!file.existsSync()) return null;
 
@@ -158,6 +170,14 @@ class DartBump {
     final dev = match.group(4) ?? '';
 
     final oldVersion = '$major.$minor.$patch$dev';
+
+    if (noBump) {
+      log(
+        '⏭️ [SKIP] Version bump skipped for `$oldVersion` in `pubspec.yaml`. (--no-bump)',
+      );
+      return (oldVersion, null);
+    }
+
     final newVersion = versionBumpType.bump(major, minor, patch, dev);
 
     log(
@@ -173,14 +193,19 @@ class DartBump {
       log('🔢  [SKIP] pubspec.yaml: $oldVersion → $newVersion');
     }
 
-    return newVersion;
+    return (oldVersion, newVersion);
   }
 
   /// Prepends a versioned entry to `CHANGELOG.md`.
   ///
   /// If the file does not exist, it is created.
   /// Always returns `true` once writing succeeds.
-  String updateChangelog(String version, String? changeLogEntry) {
+  String? updateChangelog(String version, String? changeLogEntry) {
+    if (noChangelog) {
+      log('⏭️  [SKIP] Skipping CHANGELOG update. (--no-changelog)');
+      return null;
+    }
+
     final file = File('${projectDir.path}/CHANGELOG.md');
     final changeLogEntryVersioned = prepareChangelogEntry(
       version,
@@ -239,6 +264,13 @@ class DartBump {
   Future<List<File>> updateExtraFiles(String version) async {
     final extraFiles = this.extraFiles;
     if (extraFiles == null || extraFiles.isEmpty) return [];
+
+    if (noExtra) {
+      log(
+        '⏭️  [SKIP] Skipping ${extraFiles.length} extra files update. (--no-extra)',
+      );
+      return [];
+    }
 
     var updatedFiles = <File>[];
 
@@ -366,7 +398,7 @@ class DartBump {
   /// Extracts the current Git diff using `git diff`.
   ///
   /// Returns `null` if the command fails.
-  String? extractGitPatch() {
+  String? extractGitDiff() {
     var gitDiffTag = this.gitDiffTag?.trim();
 
     {
@@ -457,16 +489,15 @@ class DartBump {
 
   /// Generates a CHANGELOG entry from a source control patch.
   ///
-  /// If [patch] is empty or contains only whitespace, `null` is returned.
+  /// If [diff] is empty or contains only whitespace, `null` is returned.
   /// When a [changeLogGenerator] is configured, the patch is delegated to it
   /// for conversion into a formatted CHANGELOG entry.
   ///
   /// Returns the generated entry, or `null` if generation is skipped or
   /// no generator is available.
-  Future<String?> generateChangelogFromPatch(String patch) async {
-    if (patch.trim().isEmpty) return null;
-
-    return changeLogGenerator?.generateChangelogFromPatch(patch);
+  Future<String?> generateChangelogFromPatch(String diff) async {
+    if (diff.trim().isEmpty) return null;
+    return changeLogGenerator?.generateChangelogFromPatch(diff);
   }
 
   /// Executes the full version bump workflow.
@@ -496,25 +527,15 @@ class DartBump {
 
     log('✅  Git repository detected');
 
-    String? changeLogEntry;
-    if (changeLogGenerator != null) {
-      final patch = extractGitPatch();
-      if (patch != null && patch.isNotEmpty) {
-        log('🧠  $changeLogGenerator — generating CHANGELOG entries...');
-        changeLogEntry = await generateChangelogFromPatch(patch);
-      } else {
-        log('⚠️  Empty patch, no CHANGELOG to generate.');
-      }
-    } else {
-      log(
-        '⚠️  No changeLogGenerator defined — skipping CHANGELOG entries generation.',
-      );
+    var changeLogEntry = await resolveChangeLogEntry();
+
+    var bumpResult = bumpVersion();
+    if (bumpResult == null) {
+      throw 'Failed to read `pubspec.yaml` at: ${projectDir.path}';
     }
 
-    final version = bumpPatchVersion();
-    if (version == null) {
-      throw 'Failed to bump pubspec version';
-    }
+    final (oldVersion, newVersion) = bumpResult;
+    final version = newVersion ?? oldVersion;
 
     var updatedChangeLogEntry = updateChangelog(version, changeLogEntry);
 
@@ -531,5 +552,37 @@ class DartBump {
       changeLogEntry: updatedChangeLogEntry,
       extraFiles: extraFiles,
     );
+  }
+
+  /// Resolves the CHANGELOG entry for the current Git state.
+  ///
+  /// Behavior:
+  /// - Skips generation when `--no-changelog` is enabled
+  /// - Extracts the Git diff from the project directory ([projectDir])
+  /// - Generates a CHANGELOG entry when a non-empty patch is found
+  /// - Returns `null` for empty patches or missing generators
+  ///
+  /// Notes:
+  /// - This method does **not** write to `CHANGELOG.md`
+  /// - Logging clearly indicates skip and generation reasons
+  Future<String?> resolveChangeLogEntry() async {
+    if (noChangelog) {
+      log('⏭️  [SKIP] Skipping CHANGELOG generation. (--no-changelog)');
+      return null;
+    } else if (changeLogGenerator != null) {
+      final gitDiff = extractGitDiff();
+      if (gitDiff != null && gitDiff.isNotEmpty) {
+        log('🧠  $changeLogGenerator — generating CHANGELOG entries...');
+        return await generateChangelogFromPatch(gitDiff);
+      } else {
+        log('⚠️  Empty patch, no CHANGELOG to generate.');
+        return null;
+      }
+    } else {
+      log(
+        '⚠️  No changeLogGenerator defined — skipping CHANGELOG entries generation.',
+      );
+      return null;
+    }
   }
 }

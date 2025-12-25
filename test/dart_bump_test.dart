@@ -29,9 +29,14 @@ class ApiRoot {
 
   test('bumpPatchVersion increments patch correctly', () {
     final bump = DartBump(tempDir);
-    final newVersion = bump.bumpPatchVersion();
+    final bumpResult = bump.bumpVersion();
+    expect(bumpResult, isNotNull);
 
+    var (oldVersion, newVersion) = bumpResult!;
+
+    expect(oldVersion, '1.0.0');
     expect(newVersion, '1.0.1');
+
     final pubspec = File('${tempDir.path}/pubspec.yaml').readAsStringSync();
     expect(pubspec, contains('version: 1.0.1'));
   });
@@ -226,6 +231,89 @@ class ApiRoot {
     expect(apiRootContent, contains("'1.0.0'"));
   });
 
+  test('--no-bump does not change version', () async {
+    final bump = TestDartBump(
+      tempDir,
+      gitDiff: 'diff --git a/lib/foo.dart b/lib/foo.dart\n+void foo() {}',
+      noBump: true,
+    );
+
+    final result = await bump.bump();
+
+    expect(result, isNotNull);
+    expect(result!.version, '1.0.0');
+
+    final pubspec = File('${tempDir.path}/pubspec.yaml').readAsStringSync();
+    expect(pubspec, contains('version: 1.0.0'));
+
+    expect(
+      bump.logs.any(
+        (l) => l.contains(
+          '[SKIP] Version bump skipped for `1.0.0` in `pubspec.yaml`. (--no-bump)',
+        ),
+      ),
+      isTrue,
+    );
+  });
+
+  test('--no-changelog skips CHANGELOG generation', () async {
+    final changeLogGenerator = TestChangeLogGenerator();
+
+    final bump = TestDartBump(
+      tempDir,
+      changeLogGenerator: changeLogGenerator,
+      gitDiff: 'diff --git a/lib/foo.dart b/lib/foo.dart\n+void foo() {}',
+      noChangelog: true,
+    );
+
+    final result = await bump.bump();
+
+    expect(result, isNotNull);
+    expect(result!.version, '1.0.1');
+
+    expect(File('${tempDir.path}/CHANGELOG.md').existsSync(), isFalse);
+    expect(changeLogGenerator.receivedPatches, isEmpty);
+
+    expect(
+      bump.logs.any(
+        (l) => l.contains('[SKIP] Skipping CHANGELOG update. (--no-changelog)'),
+      ),
+      isTrue,
+    );
+  });
+
+  test('--no-extra skips extra file updates', () async {
+    final extraFile = File('${tempDir.path}/lib/src/version_file.dart');
+    extraFile.writeAsStringSync("const version = '1.0.0';");
+
+    final bump = TestDartBump(
+      tempDir,
+      noExtra: true,
+      extraFiles: {
+        'lib/src/version_file.dart': RegExp(r"const version = '([^']+)'"),
+        'lib/src/api_root.dart': RegExp(r"'(\d+\.\d+\.\d+)'"),
+      },
+    );
+
+    final updatedFiles = await bump.updateExtraFiles('1.0.1');
+
+    expect(updatedFiles, isEmpty);
+
+    expect(extraFile.readAsStringSync(), contains("const version = '1.0.0'"));
+
+    final apiRootContent = File(
+      '${tempDir.path}/lib/src/api_root.dart',
+    ).readAsStringSync();
+    expect(apiRootContent, contains("'1.0.0'"));
+
+    expect(
+      bump.logs.any(
+        (l) => l.contains('[SKIP] Skipping 2 extra files update. (--no-extra)'),
+      ),
+      isTrue,
+    );
+  });
+
   group('VersionBumpType', () {
     test('TestDartBump(patch)', () async {
       final bump = TestDartBump(
@@ -400,10 +488,14 @@ class TestDartBump extends DartBump {
   TestDartBump(
     super.projectDir, {
     super.changeLogGenerator,
+    super.extraFiles,
     this.gitDiff = '',
     this.tags = const [],
     super.gitDiffTag,
     super.versionBumpType,
+    super.noBump,
+    super.noChangelog,
+    super.noExtra,
     super.dryRun,
   });
 
