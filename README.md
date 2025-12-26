@@ -19,54 +19,25 @@ It integrates with Git and OpenAI to:
 Designed for **automation, CI usage, and developer tooling**.
 
 ---
+Here’s a grammatically polished version:
 
 ## Features
 
-- 🔢 Automatic patch version bump (`x.y.z → x.y.(z+1)`)
-- 🧩 Git diff extraction
-- 📝 AI-generated, structured CHANGELOG entries
-- 🔧 API version synchronization
-- ♻️ Fully overridable logging
-- 🗂️ Support for extra files with custom version regex patterns
+* ⚡ Flexible usage via CLI (`dart_bump`) or programmatically through the `DartBump` class
+* 🔢 Automatic semantic version bump (`pubspec.yaml`)
+  * Defaults to patch, with optional minor or major increments
+* 📝 AI-generated, structured CHANGELOG entries
+  * Generated from the Git diff using your OpenAI API key (`--api-key`)
+  * 🧩 Automatic Git diff extraction
+      * From the working tree, a specific Git tag, or the last project tag
+* 🔧 Automatic version synchronization in project files
+  * Source code constants, and extra files configurable via `--extra-file`
+* 🧪 Dry-run mode for safe previews without modifying files (`--dry-run`)
+* ♻️ Fully overridable and testable logging
 
 ---
 
 ## Usage
-
-### Programmatic
-
-```dart
-import 'dart:io';
-import 'package:dart_bump/dart_bump.dart';
-
-void main() async {
-  final bump = DartBump(
-    Directory.current,
-    changeLogGenerator: OpenAIChangeLogGenerator(
-      apiKey: Platform.environment['OPENAI_API_KEY'],
-    ),
-  );
-
-  final result = await bump.bump();
-
-  if (result == null) {
-    print('ℹ️  Nothing to bump — version is already up to date.');
-    return;
-  }
-
-  print('🎯 New version: ${result.version}');
-
-  final changelog = result.changeLogEntry;
-  if (changelog != null && changelog.isNotEmpty) {
-    print('📝 Generated CHANGELOG entry:');
-    print('───────────────────────────────');
-    print(changelog);
-    print('───────────────────────────────');
-  }
-}
-````
-
----
 
 ### CLI
 
@@ -107,7 +78,7 @@ dart_bump
 # Bump a project in another directory
 dart_bump /path/to/project
 
-# Bump with an explicit OpenAI API key
+# Bump version using an explicit OpenAI API key for CHANGELOG generation
 dart_bump --api-key YOUR_API_KEY
 
 # Bump a project in another directory, update an extra file,
@@ -115,9 +86,89 @@ dart_bump --api-key YOUR_API_KEY
 dart_bump /path/to/backend-dir \
   --extra-file "lib/src/api.dart=version\\s*=\\s*'([^']+)'\\s*;" \
   --api-key sk-xyzkey
+
+# Skip version bump, but generate the CHANGELOG
+dart_bump --no-bump --api-key sk-xyzkey
+
+# Bump version, but do NOT generate the CHANGELOG
+dart_bump --no-changelog
+
+# Bump version and generate the CHANGELOG, but skip extra file updates
+dart_bump \
+  --extra-file "lib/src/api.dart=version\\s*=\\s*'([^']+)'\\s*;" \
+  --api-key sk-xyzkey \
+  --no-extra
 ```
 - ***The dart_bump CLI can be customized with one or more `--extra-file` entries,
 allowing different projects to update additional files with the new version automatically.***
+
+---
+
+### Programmatic
+
+You can use `dart_bump` directly in your Dart code by creating an instance of the `DartBump` class.
+This allows full control over version bumping, CHANGELOG generation, and updating extra files, all without invoking the **CLI**.
+
+```dart
+import 'dart:io';
+import 'package:dart_bump/dart_bump.dart';
+
+void main() async {
+  final bump = DartBump(
+    Directory.current,
+    changeLogGenerator: OpenAIChangeLogGenerator(
+      apiKey: Platform.environment['OPENAI_API_KEY'],
+    ),
+  );
+
+  final result = await bump.bump();
+
+  if (result == null) {
+    print('ℹ️  Nothing to bump — version is already up to date.');
+    return;
+  }
+
+  print('🎯 New version: ${result.version}');
+
+  final changelog = result.changeLogEntry;
+  if (changelog != null && changelog.isNotEmpty) {
+    print('📝 Generated CHANGELOG entry:');
+    print('───────────────────────────────');
+    print(changelog);
+    print('───────────────────────────────');
+  }
+}
+````
+
+---
+
+## Project-Standard Version Bumping with `./bump.sh`
+
+The `dart_bump` package itself uses a committed `bump.sh` script.
+It’s recommended to do the same in your projects.
+
+By adding `bump.sh` to the project root **and committing it**, all developers bump versions in **exactly the same way**, with the same options, files, and rules.
+
+**Example `bump.sh` (used by `dart_bump` itself):**
+
+```bash
+#!/bin/bash
+
+API_KEY=$1
+
+dart_bump . \
+  --extra-file "lib/src/dart_bump_base.dart=static\\s+final\\s+String\\s+VERSION\\s*=\\s*['\"]([\\w.\\-]+)['\"]" \
+  --api-key "$API_KEY"
+```
+
+**Usage:**
+
+```bash
+chmod +x bump.sh
+./bump.sh sk-your-openai-api-key
+```
+
+Committing this script prevents configuration drift, enforces consistent versioning, and documents project-specific bump rules in a reproducible way.
 
 ---
 
