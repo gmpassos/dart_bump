@@ -20,7 +20,6 @@ Ideal for **automation, CI pipelines, and developer workflows**, `dart_bump` **s
 while maintaining reliability.
 
 ---
-Here’s a grammatically polished version:
 
 ## Features
 
