@@ -174,7 +174,7 @@ Committing this script prevents configuration drift, enforces consistent version
 
 ## How It Works
 
-1. Verifies the project is a Git repository ✔️
+1. Verifies that the project is a Git repository ✔️
 2. Runs `git diff` to extract changes 🧩
 3. Sends the patch to ChatGPT to generate a CHANGELOG entry 🧠
 4. Increments the patch version in `pubspec.yaml` 🔢
@@ -188,7 +188,7 @@ All steps fail fast and log clearly.
 ## Requirements
 
 * Git installed and available in PATH
-* Dart 3.x+
+* Dart 3.9+
 * OpenAI API key (optional but recommended)
 
 If no API key is provided, version bumping still works, but the CHANGELOG entry will be a placeholder.
