@@ -55,7 +55,7 @@ enum VersionBumpType {
 class DartBump {
   /// Package `dart_bump` version.
   // ignore: non_constant_identifier_names
-  static final String VERSION = '1.0.5';
+  static final String VERSION = '1.0.6';
 
   /// Root directory of the Dart project.
   final Directory projectDir;

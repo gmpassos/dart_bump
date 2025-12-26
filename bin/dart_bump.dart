@@ -28,9 +28,9 @@ void main(List<String> argsOrig) async {
 
   var projectDirPath = args.argumentAsString(0, Directory.current.path)!;
 
-  var gitDiffLinesContext = args.propertyAsInt('diffcontext');
+  var gitDiffLinesContext = args.optionAsInt('diffcontext');
 
-  var gitDiffTag = args.propertyAsString('difftag');
+  var gitDiffTag = args.optionAsString('difftag');
 
   var apiKey = args.optionAsString(
     'api-key',

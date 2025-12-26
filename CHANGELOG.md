@@ -1,3 +1,10 @@
+## 1.0.6
+
+- Updated `README.md`:
+  - Added a recommended project-standard `bump.sh` script example for consistent version bumping across teams.
+
+- Updated `pubspec.yaml` description to better reflect functionality and integration features.
+
 ## 1.0.5
 
 - CLI (`bin/dart_bump.dart`):
