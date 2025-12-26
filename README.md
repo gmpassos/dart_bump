@@ -6,17 +6,18 @@
 [![Last Commit](https://img.shields.io/github/last-commit/gmpassos/dart_bump?logo=github&logoColor=white)](https://github.com/gmpassos/dart_bump/commits/main)
 [![License](https://img.shields.io/github/license/gmpassos/dart_bump?logo=open-source-initiative&logoColor=green)](https://github.com/gmpassos/dart_bump/blob/main/LICENSE)
 
-`dart_bump` is a Dart automation tool for **safe, consistent patch version bumps** in Dart projects.
+`dart_bump` is a Dart automation tool for **safe, consistent version bump** in Dart projects.
 
 It integrates with Git and OpenAI to:
 
-- Extract the current Git diff
-- Generate a structured `CHANGELOG.md` entry
-- Increment the patch version in `pubspec.yaml`
-- Update API version constants
-- Keep releases consistent and low-effort
+* Extract the current Git diff automatically
+* Generate structured and AI-assisted `CHANGELOG.md` entries
+* Increment the version in `pubspec.yaml` (patch, minor, or major)
+* Update version constants in source code and extra files
+* Maintain consistent, low-effort releases across the project and the development team
 
-Designed for **automation, CI usage, and developer tooling**.
+Ideal for **automation, CI pipelines, and developer workflows**, `dart_bump` **simplifies and standardizes versioning**
+while maintaining reliability.
 
 ---
 Here’s a grammatically polished version:
