@@ -13,5 +13,6 @@
 ///
 library;
 
+export 'src/branch_name_generator.dart';
 export 'src/changelog_generator.dart';
 export 'src/dart_bump_base.dart';

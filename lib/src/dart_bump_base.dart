@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'branch_name_generator.dart';
 import 'changelog_generator.dart';
 
 /// Defines the type of semantic version increment to apply.
@@ -55,7 +56,7 @@ enum VersionBumpType {
 class DartBump {
   /// Package `dart_bump` version.
   // ignore: non_constant_identifier_names
-  static final String VERSION = '1.0.6';
+  static final String VERSION = '1.0.7';
 
   /// Root directory of the Dart project.
   final Directory projectDir;
@@ -107,11 +108,22 @@ class DartBump {
   /// placeholder entry may be used instead.
   final ChangeLogGenerator? changeLogGenerator;
 
+  /// Generator responsible for producing Git branch name suggestions
+  /// from a CHANGELOG entry.
+  ///
+  /// When provided, it is used to transform a formatted CHANGELOG entry
+  /// into a list of suggested Git branch names. If `null`, branch name
+  /// generation is skipped and no suggestions are produced.
+  final BranchNameGenerator? branchNameGenerator;
+
   /// Whether to skip all version bump operations.
   final bool noBump;
 
   /// Whether to skip CHANGELOG generation entirely.
   final bool noChangelog;
+
+  /// Whether to skip branch name generation entirely.
+  final bool noBranches;
 
   /// Whether to ignore all `--extra-file` entries.
   final bool noExtra;
@@ -131,9 +143,11 @@ class DartBump {
     this.gitDiffLinesContext = 10,
     this.extraFiles,
     this.changeLogGenerator,
+    this.branchNameGenerator,
     this.versionBumpType = VersionBumpType.patch,
     this.noBump = false,
     this.noChangelog = false,
+    this.noBranches = false,
     this.noExtra = false,
     this.dryRun = false,
   });
@@ -500,6 +514,21 @@ class DartBump {
     return changeLogGenerator?.generateChangelogFromPatch(diff);
   }
 
+  /// Generates a list of Git branch name suggestions from a CHANGELOG entry.
+  ///
+  /// If [changelog] is empty or contains only whitespace, `null` is returned.
+  /// When a [branchNameGenerator] is configured, the CHANGELOG entry is
+  /// delegated to it for conversion into branch name suggestions.
+  ///
+  /// Returns the generated list, or `null` if generation is skipped or
+  /// no generator is available.
+  Future<List<String>?> generateBranchNamesFromChangelog(
+    String changelog,
+  ) async {
+    if (changelog.trim().isEmpty) return null;
+    return branchNameGenerator?.generateBranchesFromChangelog(changelog);
+  }
+
   /// Executes the full version bump workflow.
   ///
   /// Throws if:
@@ -509,7 +538,14 @@ class DartBump {
   /// - Required files cannot be updated
   ///
   /// Returns the new version and generated CHANGELOG entry.
-  Future<({String version, String? changeLogEntry, List<File> extraFiles})?>
+  Future<
+    ({
+      String version,
+      String? changeLogEntry,
+      List<String> branchNames,
+      List<File> extraFiles,
+    })?
+  >
   bump() async {
     if (!projectDir.existsSync()) {
       throw 'Project directory does not exist';
@@ -528,6 +564,8 @@ class DartBump {
     log('✅  Git repository detected');
 
     var changeLogEntry = await resolveChangeLogEntry();
+
+    var branchNames = await resolveBranchNameSuggestions(changeLogEntry) ?? [];
 
     var bumpResult = bumpVersion();
     if (bumpResult == null) {
@@ -550,6 +588,7 @@ class DartBump {
     return (
       version: version,
       changeLogEntry: updatedChangeLogEntry,
+      branchNames: branchNames,
       extraFiles: extraFiles,
     );
   }
@@ -584,5 +623,39 @@ class DartBump {
       );
       return null;
     }
+  }
+
+  /// Resolves Git branch name suggestions from a CHANGELOG entry.
+  ///
+  /// Behavior:
+  /// - Skips generation when `--no-branches` is enabled
+  /// - Generates branch name suggestions from the provided CHANGELOG entry
+  /// - Returns `null` when generation is skipped or no suggestions are produced
+  ///
+  /// Notes:
+  /// - This method does **not** create or checkout branches
+  /// - Logging clearly indicates skip and generation reasons
+  Future<List<String>?> resolveBranchNameSuggestions(
+    String? changelogEntry,
+  ) async {
+    if (noBranches) {
+      log('⏭️  [SKIP] Skipping branch name generation. (--no-branches)');
+      return null;
+    }
+
+    if (branchNameGenerator == null) {
+      log(
+        '⚠️  No branchNameGenerator defined — skipping branch name generation.',
+      );
+      return null;
+    }
+
+    if (changelogEntry == null || changelogEntry.trim().isEmpty) {
+      log('⚠️  No CHANGELOG entry provided for branch name generation.');
+      return null;
+    }
+
+    log('🧠  $branchNameGenerator — generating branch name suggestions...');
+    return generateBranchNamesFromChangelog(changelogEntry);
   }
 }
