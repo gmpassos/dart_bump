@@ -1,3 +1,22 @@
+## 1.0.7
+
+- Added Git branch name suggestion feature:
+  - New abstract class `BranchNameGenerator` for generating branch names from a CHANGELOG entry.
+  - New implementation `OpenAIBranchNameGenerator` using OpenAI Chat Completions API.
+
+- `DartBump`:
+  - Added support for `branchNameGenerator` and `noBranches` flags.
+  - Added method `generateBranchNamesFromChangelog` to generate branch names from a changelog entry.
+  - Added method `resolveBranchNameSuggestions` to control branch name generation workflow.
+  - Updated `bump` method to return generated branch names along with version, changelog, and extra files.
+
+- CLI (`bin/dart_bump.dart`):
+  - Added `--no-branches` option to skip branch name generation.
+  - Integrated branch name generation and printing of suggested branches in the CLI output.
+
+- Library exports:
+  - Exported `branch_name_generator.dart` from `lib/dart_bump.dart`.
+
 ## 1.0.6
 
 - Updated `README.md`:

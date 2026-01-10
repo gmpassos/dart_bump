@@ -1,7 +1,7 @@
 name: dart_bump
 description: Dart automation tool for safe, consistent version bumps with CHANGELOG generation and Git/OpenAI integration.
 
-version: 1.0.6
+version: 1.0.7
 repository: https://github.com/gmpassos/dart_bump
 
 executables:
@@ -17,5 +17,5 @@ dependencies:
 
 dev_dependencies:
   lints: ^6.0.0
-  test: ^1.28.0
+  test: ^1.29.0
   dependency_validator: ^5.0.3

@@ -148,7 +148,7 @@ class OpenAIChangeLogGenerator extends ChangeLogGenerator {
     final body = await utf8.decodeStream(response);
 
     if (response.statusCode != 200) {
-      throw 'ChatGPT API error: $body';
+      throw 'OpenAI API error: $body';
     }
 
     final decoded = jsonDecode(body);

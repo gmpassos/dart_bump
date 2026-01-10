@@ -43,10 +43,12 @@ class ApiRoot {
 
   test('bump updates version and CHANGELOG correctly', () async {
     final changeLogGenerator = TestChangeLogGenerator();
+    var branchNameGenerator = TestBranchNameGenerator();
 
     final bump = TestDartBump(
       tempDir,
       changeLogGenerator: changeLogGenerator,
+      branchNameGenerator: branchNameGenerator,
       gitDiff: 'diff --git a/lib/foo.dart b/lib/foo.dart\n+void foo() {}',
     );
 
@@ -55,6 +57,7 @@ class ApiRoot {
     expect(result, isNotNull);
     expect(result!.version, '1.0.1');
     expect(result.changeLogEntry, contains('Test change generated'));
+    expect(result.branchNames, equals(['feature/test-branch']));
 
     final changelog = File('${tempDir.path}/CHANGELOG.md').readAsStringSync();
     expect(changelog, contains('## 1.0.1'));
@@ -282,6 +285,34 @@ class ApiRoot {
     );
   });
 
+  test('--no-branches skips branch name generation', () async {
+    final changeLogGenerator = TestChangeLogGenerator();
+    final branchNameGenerator = TestBranchNameGenerator();
+
+    final bump = TestDartBump(
+      tempDir,
+      changeLogGenerator: changeLogGenerator,
+      branchNameGenerator: branchNameGenerator,
+      gitDiff: 'diff --git a/lib/foo.dart b/lib/foo.dart\n+void foo() {}',
+      noBranches: true,
+    );
+
+    final result = await bump.bump();
+
+    expect(result, isNotNull);
+    expect(result!.branchNames, isEmpty);
+    expect(branchNameGenerator.receivedChangelogs, isEmpty);
+
+    expect(
+      bump.logs.any(
+        (l) => l.contains(
+          '[SKIP] Skipping branch name generation. (--no-branches)',
+        ),
+      ),
+      isTrue,
+    );
+  });
+
   test('--no-extra skips extra file updates', () async {
     final extraFile = File('${tempDir.path}/lib/src/version_file.dart');
     extraFile.writeAsStringSync("const version = '1.0.0';");
@@ -478,6 +509,21 @@ class TestChangeLogGenerator extends ChangeLogGenerator {
   }
 }
 
+/// Mock BranchNameGenerator for tests
+class TestBranchNameGenerator extends BranchNameGenerator {
+  final List<String> receivedChangelogs = [];
+
+  TestBranchNameGenerator();
+
+  @override
+  Future<List<String>?> generateBranchesFromChangelog(
+    String changelogEntry,
+  ) async {
+    receivedChangelogs.add(changelogEntry);
+    return ['feature/test-branch'];
+  }
+}
+
 class TestDartBump extends DartBump {
   final List<String> logs = [];
 
@@ -488,12 +534,14 @@ class TestDartBump extends DartBump {
   TestDartBump(
     super.projectDir, {
     super.changeLogGenerator,
+    super.branchNameGenerator,
     super.extraFiles,
     this.gitDiff = '',
     this.tags = const [],
     super.gitDiffTag,
     super.versionBumpType,
     super.noBump,
+    super.noBranches,
     super.noChangelog,
     super.noExtra,
     super.dryRun,

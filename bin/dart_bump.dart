@@ -22,6 +22,7 @@ void main(List<String> argsOrig) async {
 
   final noBump = args.options.containsKey('no-bump');
   final noChangelog = args.options.containsKey('no-changelog');
+  final noBranches = args.options.containsKey('no-branches');
   final noExtra = args.options.containsKey('no-extra');
 
   final dryRun = args.flag('n') || args.options.containsKey('dryrun');
@@ -92,10 +93,12 @@ void main(List<String> argsOrig) async {
     gitDiffTag: gitDiffTag,
     gitDiffLinesContext: gitDiffLinesContext?.clamp(2, 100) ?? 10,
     changeLogGenerator: OpenAIChangeLogGenerator(apiKey: apiKey),
+    branchNameGenerator: OpenAIBranchNameGenerator(apiKey: apiKey),
     extraFiles: extraFiles,
     versionBumpType: versionBumpType,
     noBump: noBump,
     noChangelog: noChangelog,
+    noBranches: noBranches,
     noExtra: noExtra,
     dryRun: dryRun,
   );
@@ -117,6 +120,15 @@ void main(List<String> argsOrig) async {
         '${result.changeLogEntry}\n'
         '───────────────────────────────',
       );
+      print('');
+    }
+
+    if (result.branchNames.isNotEmpty) {
+      print(
+        '🌿  Branches suggested:\n'
+        '   🔀  ${result.branchNames.map((b) => b).join('\n   🔀  ')}',
+      );
+      print('');
     }
 
     if (result.extraFiles.isNotEmpty) {
@@ -124,6 +136,7 @@ void main(List<String> argsOrig) async {
         '📂  Extra files updated:\n'
         '   📄  ${result.extraFiles.map((f) => f.path).join('\n   📄  ')}',
       );
+      print('');
     }
 
     print('🎯  New version: ${result.version}');
@@ -153,6 +166,7 @@ OPTIONS:
   --patch                      🩹 Bump patch version (bug fixes) (default)
   --no-bump                    🚫 Do not update version numbers
   --no-changelog               🧾 Skip CHANGELOG generation
+  --no-branches                🔀 Skip branch name list generation
   --no-extra                   🧺 Ignore all --extra-file entries
   -n, --dry-run                🧪 Preview changes only — no files will be modified
   -h, --help                   ❓ Show this help message
